@@ -452,7 +452,7 @@ IL2CPP_EXTERN_C void DownloadHandlerAudioClip_t11D829901BD9F3137CBB5D7BEA99FEAD9
 IL2CPP_EXTERN_C void DownloadHandlerAudioClip_t11D829901BD9F3137CBB5D7BEA99FEAD976E56AC_marshal_com_cleanup(DownloadHandlerAudioClip_t11D829901BD9F3137CBB5D7BEA99FEAD976E56AC_marshaled_com& marshaled)
 {
 }
-// Method Definition Index: 135195
+// Method Definition Index: 135238
 IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR intptr_t DownloadHandlerAudioClip_Create_mF088040A27BB328CB057563702E95B57418F1B71 (DownloadHandlerAudioClip_t11D829901BD9F3137CBB5D7BEA99FEAD976E56AC* ___0_obj, String_t* ___1_url, int32_t ___2_audioType, const RuntimeMethod* method) 
 {
 	static bool s_Il2CppMethodInitialized;
@@ -531,7 +531,7 @@ IL_003a:
 		return L_10;
 	}
 }
-// Method Definition Index: 135196
+// Method Definition Index: 135239
 IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR void DownloadHandlerAudioClip_InternalCreateAudioClip_m789B76138CF7B91F510EE1936A63A07C08975098 (DownloadHandlerAudioClip_t11D829901BD9F3137CBB5D7BEA99FEAD976E56AC* __this, String_t* ___0_url, int32_t ___1_audioType, const RuntimeMethod* method) 
 {
 	{
@@ -543,7 +543,7 @@ IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR void DownloadHandlerAudioClip_InternalCreateA
 		return;
 	}
 }
-// Method Definition Index: 135197
+// Method Definition Index: 135240
 IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR void DownloadHandlerAudioClip__ctor_mB8C00870FDA938440C2E89BCAC682E636641B61F (DownloadHandlerAudioClip_t11D829901BD9F3137CBB5D7BEA99FEAD976E56AC* __this, String_t* ___0_url, int32_t ___1_audioType, const RuntimeMethod* method) 
 {
 	{
@@ -554,7 +554,7 @@ IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR void DownloadHandlerAudioClip__ctor_mB8C00870
 		return;
 	}
 }
-// Method Definition Index: 135198
+// Method Definition Index: 135241
 IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR NativeArray_1_t81F55263465517B73C455D3400CF67B4BADD85CF DownloadHandlerAudioClip_GetNativeData_mE7E3D8ED446BE6E5ACAC630F1C2E99687E605766 (DownloadHandlerAudioClip_t11D829901BD9F3137CBB5D7BEA99FEAD976E56AC* __this, const RuntimeMethod* method) 
 {
 	NativeArray_1_t81F55263465517B73C455D3400CF67B4BADD85CF V_0;
@@ -573,7 +573,7 @@ IL_0010:
 		return L_2;
 	}
 }
-// Method Definition Index: 135199
+// Method Definition Index: 135242
 IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR void DownloadHandlerAudioClip_Dispose_mFE45B0B7E69D9AF774D2FDD484041FA374B112A6 (DownloadHandlerAudioClip_t11D829901BD9F3137CBB5D7BEA99FEAD976E56AC* __this, const RuntimeMethod* method) 
 {
 	{
@@ -583,7 +583,7 @@ IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR void DownloadHandlerAudioClip_Dispose_mFE45B0
 		return;
 	}
 }
-// Method Definition Index: 135200
+// Method Definition Index: 135243
 IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR String_t* DownloadHandlerAudioClip_GetText_m1A79A62E53F03F61A4FB28A3A95AA0267FC52025 (DownloadHandlerAudioClip_t11D829901BD9F3137CBB5D7BEA99FEAD976E56AC* __this, const RuntimeMethod* method) 
 {
 	{
@@ -592,7 +592,7 @@ IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR String_t* DownloadHandlerAudioClip_GetText_m1
 		IL2CPP_RAISE_MANAGED_EXCEPTION(L_0, ((RuntimeMethod*)il2cpp_codegen_initialize_runtime_metadata_inline((uintptr_t*)&DownloadHandlerAudioClip_GetText_m1A79A62E53F03F61A4FB28A3A95AA0267FC52025_RuntimeMethod_var)));
 	}
 }
-// Method Definition Index: 135201
+// Method Definition Index: 135244
 IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR AudioClip_t5D272C4EB4F2D3ED49F1C346DEA373CF6D585F20* DownloadHandlerAudioClip_get_audioClip_mBBA8B1C847780D3442649A0E52C822471F87C262 (DownloadHandlerAudioClip_t11D829901BD9F3137CBB5D7BEA99FEAD976E56AC* __this, const RuntimeMethod* method) 
 {
 	static bool s_Il2CppMethodInitialized;
@@ -630,7 +630,7 @@ IL_000f:
 		return L_3;
 	}
 }
-// Method Definition Index: 135202
+// Method Definition Index: 135245
 IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR void DownloadHandlerAudioClip_set_streamAudio_mD760F3FC0A37AE1DD889DDA0B3C0B39504B23E30 (DownloadHandlerAudioClip_t11D829901BD9F3137CBB5D7BEA99FEAD976E56AC* __this, bool ___0_value, const RuntimeMethod* method) 
 {
 	intptr_t G_B2_0;
@@ -660,7 +660,7 @@ IL_000f:
 		return;
 	}
 }
-// Method Definition Index: 135203
+// Method Definition Index: 135246
 IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR AudioClip_t5D272C4EB4F2D3ED49F1C346DEA373CF6D585F20* DownloadHandlerAudioClip_GetContent_mF38CB6EDB5CE453D7C2A783560BCBEA924FA2EC9 (UnityWebRequest_t6233B8E22992FC2364A831C1ACB033EF3260C39F* ___0_www, const RuntimeMethod* method) 
 {
 	static bool s_Il2CppMethodInitialized;
@@ -687,7 +687,7 @@ IL_000f:
 		return L_3;
 	}
 }
-// Method Definition Index: 135204
+// Method Definition Index: 135247
 IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR intptr_t DownloadHandlerAudioClip_Create_Injected_m94923E2B9434EB0A89D94DA65C1AEC17944F7880 (DownloadHandlerAudioClip_t11D829901BD9F3137CBB5D7BEA99FEAD976E56AC* ___0_obj, ManagedSpanWrapper_tE7FC4BBB631B130757F8DEB15853D98FD3D5DC0E* ___1_url, int32_t ___2_audioType, const RuntimeMethod* method) 
 {
 	typedef intptr_t (*DownloadHandlerAudioClip_Create_Injected_m94923E2B9434EB0A89D94DA65C1AEC17944F7880_ftn) (DownloadHandlerAudioClip_t11D829901BD9F3137CBB5D7BEA99FEAD976E56AC*, ManagedSpanWrapper_tE7FC4BBB631B130757F8DEB15853D98FD3D5DC0E*, int32_t);
@@ -697,7 +697,7 @@ IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR intptr_t DownloadHandlerAudioClip_Create_Inje
 	intptr_t icallRetVal = _il2cpp_icall_func(___0_obj, ___1_url, ___2_audioType);
 	return icallRetVal;
 }
-// Method Definition Index: 135205
+// Method Definition Index: 135248
 IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR intptr_t DownloadHandlerAudioClip_get_audioClip_Injected_m289A0FEF47542AAC49A30D15A8B14690F40062F4 (intptr_t ___0__unity_self, const RuntimeMethod* method) 
 {
 	typedef intptr_t (*DownloadHandlerAudioClip_get_audioClip_Injected_m289A0FEF47542AAC49A30D15A8B14690F40062F4_ftn) (intptr_t);
@@ -707,7 +707,7 @@ IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR intptr_t DownloadHandlerAudioClip_get_audioCl
 	intptr_t icallRetVal = _il2cpp_icall_func(___0__unity_self);
 	return icallRetVal;
 }
-// Method Definition Index: 135206
+// Method Definition Index: 135249
 IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR void DownloadHandlerAudioClip_set_streamAudio_Injected_mB5FCA3C13F88455F4022F2AA374B6CC34BEEBA98 (intptr_t ___0__unity_self, bool ___1_value, const RuntimeMethod* method) 
 {
 	typedef void (*DownloadHandlerAudioClip_set_streamAudio_Injected_mB5FCA3C13F88455F4022F2AA374B6CC34BEEBA98_ftn) (intptr_t, bool);
@@ -724,7 +724,7 @@ IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR void DownloadHandlerAudioClip_set_streamAudio
 #pragma clang diagnostic ignored "-Winvalid-offsetof"
 #pragma clang diagnostic ignored "-Wunused-variable"
 #endif
-// Method Definition Index: 135207
+// Method Definition Index: 135250
 IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR intptr_t BindingsMarshaller_ConvertToNative_m0B6B633B55007210A0C9A8F2BE35EE1AD1298016 (DownloadHandlerAudioClip_t11D829901BD9F3137CBB5D7BEA99FEAD976E56AC* ___0_handler, const RuntimeMethod* method) 
 {
 	{
@@ -838,7 +838,7 @@ IL_000d:
 		return L_6;
 	}
 }
-// Method Definition Index: 135207
+// Method Definition Index: 135250
 IL2CPP_MANAGED_FORCE_INLINE IL2CPP_METHOD_ATTR intptr_t BindingsMarshaller_ConvertToNative_m0B6B633B55007210A0C9A8F2BE35EE1AD1298016_inline (DownloadHandlerAudioClip_t11D829901BD9F3137CBB5D7BEA99FEAD976E56AC* ___0_handler, const RuntimeMethod* method) 
 {
 	{

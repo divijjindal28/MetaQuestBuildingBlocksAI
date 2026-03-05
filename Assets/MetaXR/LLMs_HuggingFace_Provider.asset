@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: LLMs_HuggingFace_Provider
   m_EditorClassIdentifier: Meta.XR.BuildingBlocks.AIBlocks::Meta.XR.BuildingBlocks.AIBlocks.HuggingFaceProvider
   supportedInferenceTypes: 1
-  apiKey: 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
+  apiKey: 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
   modelId: meta-llama/Llama-4-Scout-17B-16E-Instruct
   endpoint: https://router.huggingface.co/v1/chat/completions
   supportsVision: 1

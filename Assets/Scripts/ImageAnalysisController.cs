@@ -4,84 +4,65 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
-using Toggle = UnityEngine.UI.Toggle;
 
 public class ImageAnalysisController : MonoBehaviour
 {
     [SerializeField] private LlmAgent llmAgent;
     [SerializeField] private PassthroughCameraAccess passthroughCameraAccess;
 
-    [Header("UI Bindings")]
-    //[SerializeField] private RawImage liveImage;
-    //[SerializeField] private RawImage capturedImage;
-    [SerializeField] private Toggle captureButton;
+    [Header("UI")]
     [SerializeField] private Button STTButton;
     [SerializeField] private QuestTMPKeyboard promptKeyboardText;
-    //[SerializeField] private RectTransform llmResponseScrollView;
-
-    [Header("TTS & STT Bindings")]
-    [SerializeField] private TextToSpeechAgent ttsAgent;
-    [SerializeField] private SpeechToTextAgent sstAgent;
-
-    [Header("Input")]
     [SerializeField] private TMP_InputField promptInputField;
 
-    private TextMeshProUGUI capturedText;
-    private TextMeshProUGUI llmResponseText;
-    private RenderTexture renderTexture;
-    private Texture2D capturedFrame;
-    private bool capturingInProgress;
+    [Header("AI")]
+    [SerializeField] private SpeechToTextAgent sstAgent;
+    [SerializeField] private TextToSpeechAgent ttsAgent;
 
+    private Texture2D capturedFrame;
     private bool isListening = false;
     private bool micWarmedUp = false;
     private TextMeshProUGUI sttButtonText;
 
-    // Throttle passthrough blit to avoid accidentally fighting STT init
+    // Blit throttle (kept minimal from your previous code)
+    private RenderTexture renderTexture;
     private float lastBlitTime = 0f;
-    private float blitInterval = 1f / 45f; // target ~45 fps for UI blit, change if needed
-
-    private bool CapturingInProgress
-    {
-        get => capturingInProgress;
-        set
-        {
-            capturingInProgress = value;
-            //liveImage.gameObject.SetActive(!value);
-            //capturedImage.gameObject.SetActive(value);
-            if (capturedText != null) capturedText.text = value ? "Reset" : "Ask";
-            //if (llmResponseScrollView != null) llmResponseScrollView.gameObject.SetActive(value);
-        }
-    }
+    private float blitInterval = 1f / 45f;
 
     private void Awake()
     {
-        if (passthroughCameraAccess == null)
-        {
-            Debug.LogError("[PassthroughCameraAddOns] PassthroughCameraAccess component not found!");
-            return;
-        }
-
-        // Cache UI references
+        // cache button text
         sttButtonText = STTButton.GetComponentInChildren<TextMeshProUGUI>();
         if (sttButtonText != null) sttButtonText.text = "Start Mic";
 
-        capturedText = captureButton.GetComponentInChildren<TextMeshProUGUI>();
-        //llmResponseText = llmResponseScrollView.GetComponentInChildren<TextMeshProUGUI>();
-        //if (llmResponseText != null) llmResponseText.text = string.Empty;
-
-        CapturingInProgress = false;
-
-        // render texture for live passthrough
-        renderTexture = new RenderTexture(1024, 1024, 0);
-        renderTexture.Create();
-
-        if (passthroughCameraAccess.TargetMaterial != null)
+        // STT transcript listener: ensure no duplicate listeners
+        if (sstAgent != null)
         {
-            Graphics.Blit(null, renderTexture, passthroughCameraAccess.TargetMaterial);
-            //liveImage.texture = renderTexture;
+            sstAgent.onTranscript.RemoveListener(OnTranscriptReceived);
+            sstAgent.onTranscript.AddListener(OnTranscriptReceived);
+        }
+
+        // LLM -> TTS listener (single registration)
+        if (llmAgent != null)
+        {
+            llmAgent.onResponseReceived.RemoveAllListeners();
+            llmAgent.onResponseReceived.AddListener(OnLlmResponseReceived);
+        }
+
+        // TTS listeners (optional logging)
+        if (ttsAgent != null)
+        {
+            ttsAgent.onClipReady.RemoveAllListeners();
+            ttsAgent.onSpeakStarting.RemoveAllListeners();
+            ttsAgent.onSpeakFinished.RemoveAllListeners();
+
+            ttsAgent.onClipReady.AddListener(clip => Debug.Log("[TTS] onClipReady"));
+            ttsAgent.onSpeakStarting.AddListener(clip => Debug.Log("[TTS] onSpeakStarting"));
+            ttsAgent.onSpeakFinished.AddListener(() => Debug.Log("[TTS] onSpeakFinished"));
         }
 
         // STT button wiring (start/stop)
+        STTButton.onClick.RemoveAllListeners();
         STTButton.onClick.AddListener(() =>
         {
             if (!isListening)
@@ -90,71 +71,29 @@ public class ImageAnalysisController : MonoBehaviour
                 StopSTT();
         });
 
-        // Capture toggle
-        captureButton.onValueChanged.AddListener((_) =>
+        // setup passthrough render texture (kept from your previous script so capture works)
+        renderTexture = new RenderTexture(1024, 1024, 0);
+        renderTexture.Create();
+
+        if (passthroughCameraAccess != null && passthroughCameraAccess.TargetMaterial != null)
         {
-            if (CapturingInProgress)
-            {
-                CapturingInProgress = false;
-            }
-            else
-            {
-                CapturingInProgress = true;
-                CaptureFrame();
-            }
-        });
-
-        // LLM response handling (only speak; listeners registered once below)
-        if (llmAgent != null)
-        {
-            llmAgent.onResponseReceived.AddListener(response =>
-            {
-                //if (llmResponseText != null) llmResponseText.text = response;
-                Debug.Log("Response received: " + response);
-
-                if (ttsAgent != null)
-                {
-                    // Speak (listeners already registered once in Awake/Start)
-                    ttsAgent.SpeakText(response);
-                }
-            });
-        }
-
-        // Register TTS listeners once (avoid adding repeatedly)
-        if (ttsAgent != null)
-        {
-            ttsAgent.onClipReady.RemoveAllListeners();
-            ttsAgent.onSpeakStarting.RemoveAllListeners();
-            ttsAgent.onSpeakFinished.RemoveAllListeners();
-
-            ttsAgent.onClipReady.AddListener(clip => { Debug.Log("[TTS] onClipReady"); });
-            ttsAgent.onSpeakStarting.AddListener(clip => { Debug.Log("[TTS] onSpeakStarting"); });
-            ttsAgent.onSpeakFinished.AddListener(() => { Debug.Log("[TTS] onSpeakFinished"); });
-        }
-
-        // STT transcript listener: ensure no duplicate listeners
-        if (sstAgent != null)
-        {
-            sstAgent.onTranscript.RemoveListener(OnTranscriptReceived);
-            sstAgent.onTranscript.AddListener(OnTranscriptReceived);
+            Graphics.Blit(null, renderTexture, passthroughCameraAccess.TargetMaterial);
         }
     }
 
     private void Start()
     {
-        // Warm up mic in background shortly after startup to avoid user-visible hitch later
+        // warm up mic once to avoid visible hitch when user first presses mic
         StartCoroutine(WarmupMic());
     }
 
     private IEnumerator WarmupMic()
     {
-        if (sstAgent == null) yield break;
-        if (micWarmedUp) yield break;
+        if (sstAgent == null || micWarmedUp) yield break;
 
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSecondsRealtime(0.5f);
 
         bool started = false;
-
         try
         {
             sstAgent.StartListening();
@@ -167,7 +106,7 @@ public class ImageAnalysisController : MonoBehaviour
 
         if (!started) yield break;
 
-        yield return new WaitForSeconds(0.15f);
+        yield return new WaitForSecondsRealtime(0.15f);
 
         try
         {
@@ -181,11 +120,10 @@ public class ImageAnalysisController : MonoBehaviour
         }
     }
 
-    void Update()
+    private void Update()
     {
-        // Only blit passthrough when not capturing and not listening.
-        // This prevents GPU work from fighting the audio initialization when user starts mic.
-        if (passthroughCameraAccess.TargetMaterial != null && !CapturingInProgress && !isListening)
+        // blit passthrough when not listening (keeps GPU and audio init separated)
+        if (passthroughCameraAccess != null && passthroughCameraAccess.TargetMaterial != null && !isListening)
         {
             if (Time.realtimeSinceStartup - lastBlitTime >= blitInterval)
             {
@@ -195,7 +133,6 @@ public class ImageAnalysisController : MonoBehaviour
         }
     }
 
-    // Start STT on the next frame to avoid hitching the button click frame
     private IEnumerator StartSTTAsync()
     {
         if (sstAgent == null)
@@ -204,16 +141,14 @@ public class ImageAnalysisController : MonoBehaviour
             yield break;
         }
 
-        // Let the click frame finish
+        // finish the click frame so UI doesn't hitch
         yield return null;
-        yield return new WaitForSeconds(0.02f); // small buffer so UI updates complete
+        yield return new WaitForSecondsRealtime(0.02f);
 
         try
         {
             Debug.Log("[STT] StartListening()");
             isListening = true;
-
-            // stop passthrough blit immediately (Update respects isListening)
             if (sttButtonText != null) sttButtonText.text = "Stop Mic";
 
             sstAgent.StartListening();
@@ -248,47 +183,88 @@ public class ImageAnalysisController : MonoBehaviour
             isListening = false;
             if (sttButtonText != null) sttButtonText.text = "Start Mic";
         }
+
+        // IMPORTANT: wait briefly or poll LastTranscript so we don't send before the final transcript arrives.
+        StartCoroutine(WaitForTranscriptThenSend(0.7f)); // 700ms max wait
     }
 
-    private void OnTranscriptReceived(string transcript)
+    /// <summary>
+    /// Poll for final transcript (InputField or sstAgent.LastTranscript) for up to timeout seconds.
+    /// Then capture camera and send to LLM.
+    /// </summary>
+    private IEnumerator WaitForTranscriptThenSend(float timeoutSeconds)
     {
-        Debug.Log("[STT] Transcript: " + transcript);
+        float start = Time.realtimeSinceStartup;
+        string transcript = string.Empty;
 
-        if (promptInputField != null)
+        while (Time.realtimeSinceStartup - start < timeoutSeconds)
         {
-            // replace with transcript (or append if you prefer)
-            promptInputField.text = transcript;
+            // prefer promptInputField (it's updated by OnTranscriptReceived), otherwise fallback to sstAgent.LastTranscript if available
+            if (promptInputField != null && !string.IsNullOrWhiteSpace(promptInputField.text))
+            {
+                transcript = promptInputField.text.Trim();
+                break;
+            }
+
+            // fallback if the agent exposes LastTranscript (use reflection-safe check)
+            if (sstAgent != null)
+            {
+                // many provider implementations expose LastTranscript; try to read it safely
+                try
+                {
+                    var last = sstAgent.GetType().GetProperty("LastTranscript")?.GetValue(sstAgent) as string;
+                    if (!string.IsNullOrWhiteSpace(last))
+                    {
+                        transcript = last.Trim();
+                        break;
+                    }
+                }
+                catch { /* ignore reflection errors */ }
+            }
+
+            // small wait then continue polling
+            yield return new WaitForSecondsRealtime(0.05f);
         }
+
+        // If still empty, take whatever is in the input field (may be empty)
+        if (string.IsNullOrWhiteSpace(transcript) && promptInputField != null)
+            transcript = promptInputField.text?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(transcript))
+            Debug.LogWarning("[STT] No transcript captured before sending to LLM (sending empty prompt).");
+
+        // capture frame and send
+        yield return CaptureFrameAndSendAsync(transcript);
     }
 
-    private void CaptureFrame()
+    /// <summary>
+    /// Captures the passthrough camera texture into a Texture2D and sends prompt+image to the LLM.
+    /// </summary>
+    private IEnumerator CaptureFrameAndSendAsync(string prompt)
     {
         if (passthroughCameraAccess == null)
         {
-            Debug.LogError("[PassthroughCameraAddOns] PassthroughCameraAccess is null. Cannot capture frame.");
-            return;
+            Debug.LogWarning("[Capture] PassthroughCameraAccess null - sending prompt only.");
+            _ = llmAgent.SendPromptAsync(prompt, null);
+            yield break;
         }
 
         var sourceTexture = passthroughCameraAccess.GetTexture();
         if (sourceTexture == null)
         {
-            Debug.LogWarning("[PassthroughCameraAddOns] Passthrough camera texture is not available yet.");
-            return;
+            Debug.LogWarning("[Capture] Passthrough camera texture not ready - sending prompt only.");
+            _ = llmAgent.SendPromptAsync(prompt, null);
+            yield break;
         }
 
-        // Create or resize the Texture2D if needed
-        if (capturedFrame == null ||
-            capturedFrame.width != sourceTexture.width ||
-            capturedFrame.height != sourceTexture.height)
+        // ensure capturedFrame size matches
+        if (capturedFrame == null || capturedFrame.width != sourceTexture.width || capturedFrame.height != sourceTexture.height)
         {
-            if (capturedFrame != null)
-            {
-                Destroy(capturedFrame);
-            }
+            if (capturedFrame != null) Destroy(capturedFrame);
             capturedFrame = new Texture2D(sourceTexture.width, sourceTexture.height, TextureFormat.RGBA32, false);
         }
 
-        // Copy the texture data using a temporary RenderTexture
+        // copy using temporary RT
         RenderTexture currentRT = RenderTexture.active;
         RenderTexture tempRT = RenderTexture.GetTemporary(sourceTexture.width, sourceTexture.height, 0, RenderTextureFormat.ARGB32);
 
@@ -301,23 +277,64 @@ public class ImageAnalysisController : MonoBehaviour
         RenderTexture.active = currentRT;
         RenderTexture.ReleaseTemporary(tempRT);
 
-        if (capturedFrame != null)
+        Debug.Log($"[Capture] Frame captured: {capturedFrame.width}x{capturedFrame.height}. Sending prompt: \"{(string.IsNullOrEmpty(prompt) ? "<EMPTY>" : prompt)}\"");
+
+        // send to LLM (fire-and-forget)
+        _ = llmAgent.SendPromptAsync(prompt, capturedFrame);
+
+        // small yield so caller doesn't block
+        yield return null;
+    }
+
+    private void OnTranscriptReceived(string transcript)
+    {
+        Debug.Log("[STT] Transcript received: " + transcript);
+
+        if (promptInputField != null)
         {
-            Debug.Log($"[PassthroughCameraAddOns] Frame captured: {capturedFrame.width}x{capturedFrame.height}");
-            //capturedImage.texture = capturedFrame;
-
-            // Use the actual input field text (not QuestTMPKeyboard.KeyboardText which may be read-only)
-            string promptText = promptInputField != null ? promptInputField.text : (promptKeyboardText != null ? promptKeyboardText.KeyboardText : string.Empty);
-
-            _ = llmAgent.SendPromptAsync(promptText, capturedFrame);
+            promptInputField.text = transcript;
         }
+    }
+
+    private void OnLlmResponseReceived(string response)
+    {
+        Debug.Log("[LLM] Response received (len=" + (response?.Length ?? 0) + "): " + (string.IsNullOrEmpty(response) ? "<EMPTY>" : response));
+
+        // Don't speak empty responses — avoids playing TTS inspector default text.
+        if (string.IsNullOrWhiteSpace(response))
+        {
+            Debug.LogWarning("[LLM] Empty response — skipping TTS.");
+        }
+        else
+        {
+            if (ttsAgent != null)
+            {
+                ttsAgent.SpeakText(response);
+            }
+        }
+
+        // Reset UI for next question
+        ResetState();
+    }
+
+    private void ResetState()
+    {
+        // clear the input field (so next mic session starts fresh)
+        if (promptInputField != null)
+            promptInputField.text = string.Empty;
+
+        // ensure button text is correct (already set on stop but keep consistent)
+        if (sttButtonText != null)
+            sttButtonText.text = "Start Mic";
     }
 
     private void OnDestroy()
     {
-        // remove listeners
+        if (sstAgent != null)
+            sstAgent.onTranscript.RemoveListener(OnTranscriptReceived);
+
         if (llmAgent != null)
-            llmAgent.onResponseReceived.RemoveAllListeners();
+            llmAgent.onResponseReceived.RemoveListener(OnLlmResponseReceived);
 
         if (ttsAgent != null)
         {
@@ -325,9 +342,6 @@ public class ImageAnalysisController : MonoBehaviour
             ttsAgent.onSpeakStarting.RemoveAllListeners();
             ttsAgent.onSpeakFinished.RemoveAllListeners();
         }
-
-        if (sstAgent != null)
-            sstAgent.onTranscript.RemoveListener(OnTranscriptReceived);
 
         if (capturedFrame != null)
         {
