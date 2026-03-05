@@ -1,0 +1,221 @@
+using Meta.XR;
+using Meta.XR.BuildingBlocks.AIBlocks;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+using Toggle = UnityEngine.UI.Toggle;
+
+public class ImageAnalysisController1 : MonoBehaviour
+{
+    [SerializeField] private LlmAgent llmAgent;
+    [SerializeField] private PassthroughCameraAccess passthroughCameraAccess;
+    
+    [Header("UI Bindings")]
+    [SerializeField] private RawImage liveImage;
+    [SerializeField] private RawImage capturedImage;
+    [SerializeField] private Toggle captureButton;
+    [SerializeField] private Button STTButton;
+    [SerializeField] private QuestTMPKeyboard promptKeyboardText;
+    [SerializeField] private RectTransform llmResponseScrollView;
+    
+    [Header("TTS & STT Bindings")]
+    [SerializeField] private TextToSpeechAgent ttsAgent;
+    [SerializeField] private SpeechToTextAgent sstAgent;
+
+    private TextMeshProUGUI capturedText;
+    private TextMeshProUGUI llmResponseText;
+    private RenderTexture renderTexture;
+    private Texture2D capturedFrame;
+    private bool capturingInProgress;
+
+    private bool isListening = false;
+    private TextMeshProUGUI sttButtonText;
+    [SerializeField] private TMP_InputField promptInputField;
+
+    private bool CapturingInProgress
+    {
+        get => capturingInProgress;
+        set
+        {
+            capturingInProgress = value;
+            liveImage.gameObject.SetActive(!value);
+            capturedImage.gameObject.SetActive(value);
+            capturedText.text = value ? "Clear Capture" : "Capture";
+            llmResponseScrollView.gameObject.SetActive(value);
+        }
+    }
+
+    private void Awake()
+    {
+        if (passthroughCameraAccess == null)
+        {
+            Debug.LogError("[PassthroughCameraAddOns] PassthroughCameraAccess component not found!");
+            return;
+        }
+        sttButtonText = STTButton.GetComponentInChildren<TextMeshProUGUI>();
+        if (sttButtonText != null) sttButtonText.text = "Start Mic";
+        if (sstAgent != null)
+            sstAgent.onTranscript.AddListener(OnTranscriptReceived);
+        
+        capturedText = captureButton.GetComponentInChildren<TextMeshProUGUI>();
+        llmResponseText = llmResponseScrollView.GetComponentInChildren<TextMeshProUGUI>();
+        llmResponseText.text = string.Empty;
+        CapturingInProgress = false;
+        renderTexture = new RenderTexture(1024, 1024, 0);
+        renderTexture.Create();
+
+        STTButton.onClick.AddListener(() =>
+        {
+            if (!isListening) StartSTT();
+            else StopSTT();
+        });
+
+
+        if (passthroughCameraAccess.TargetMaterial != null)
+        {
+            Graphics.Blit(null, renderTexture, passthroughCameraAccess.TargetMaterial);
+            liveImage.texture = renderTexture;
+        }
+
+        captureButton.onValueChanged.AddListener((_) =>
+        {
+            if (CapturingInProgress)
+            {
+                CapturingInProgress = false;
+            }
+            else
+            {
+                CapturingInProgress = true;
+                CaptureFrame();   
+            }
+        });
+        
+        llmAgent.onResponseReceived.AddListener(response =>
+        {
+            llmResponseText.text = response;
+            Debug.Log("Response received: " + response);
+
+            // to ensure AIBuildingBlocksLLM scene doesn't break due to this new TTS requirement
+            if (ttsAgent == null) return;
+            
+            ttsAgent.SpeakText(response);
+            
+            ttsAgent.onClipReady.AddListener(clip =>
+            {
+                Debug.Log("onClipReady");
+            });
+            
+            ttsAgent.onSpeakStarting.AddListener(clip =>
+            {
+                Debug.Log("onSpeakStarting");
+            });
+            
+            ttsAgent.onSpeakFinished.AddListener(() => 
+            {
+                Debug.Log("onSpeakFinished");
+            });
+        });
+    }
+    
+    void Update()
+    {
+        if (passthroughCameraAccess.TargetMaterial != null && !CapturingInProgress)
+        {
+            Graphics.Blit(null, renderTexture, passthroughCameraAccess.TargetMaterial);
+        }
+    }
+
+    private void StartSTT()
+    {
+        if (sstAgent == null)
+        {
+            Debug.LogWarning("[STT] SpeechToTextAgent is null.");
+            return;
+        }
+
+        Debug.Log("[STT] StartListening()");
+        isListening = true;
+        sstAgent.StartListening();   // correct method name from docs
+        if (sttButtonText != null) sttButtonText.text = "Stop Mic";
+    }
+
+    private void StopSTT()
+    {
+        if (sstAgent == null)
+        {
+            Debug.LogWarning("[STT] SpeechToTextAgent is null.");
+            return;
+        }
+
+        Debug.Log("[STT] StopNow()");
+        isListening = false;
+        sstAgent.StopNow();         // correct method name from docs
+        if (sttButtonText != null) sttButtonText.text = "Start Mic";
+    }
+    private void OnTranscriptReceived(string transcript)
+    {
+        Debug.Log("[STT] Transcript: " + transcript);
+
+        if (promptInputField != null)
+        {
+            promptInputField.text = transcript;
+        }
+    }
+
+    private void CaptureFrame()
+    {
+        if (passthroughCameraAccess == null)
+        {
+            Debug.LogError("[PassthroughCameraAddOns] PassthroughCameraAccess is null. Cannot capture frame.");
+            return;
+        }
+
+        var sourceTexture = passthroughCameraAccess.GetTexture();
+        if (sourceTexture == null)
+        {
+            Debug.LogWarning("[PassthroughCameraAddOns] Passthrough camera texture is not available yet.");
+            return;
+        }
+
+        // Create or resize the Texture2D if needed
+        if (capturedFrame == null || 
+            capturedFrame.width != sourceTexture.width || 
+            capturedFrame.height != sourceTexture.height)
+        {
+            if (capturedFrame != null)
+            {
+                Destroy(capturedFrame);
+            }
+            capturedFrame = new Texture2D(sourceTexture.width, sourceTexture.height, TextureFormat.RGBA32, false);
+        }
+
+        // Copy the texture data using a temporary RenderTexture
+        RenderTexture currentRT = RenderTexture.active;
+        RenderTexture tempRT = RenderTexture.GetTemporary(sourceTexture.width, sourceTexture.height, 0, RenderTextureFormat.ARGB32);
+        
+        Graphics.Blit(sourceTexture, tempRT);
+        RenderTexture.active = tempRT;
+        
+        capturedFrame.ReadPixels(new Rect(0, 0, tempRT.width, tempRT.height), 0, 0);
+        capturedFrame.Apply();
+        
+        RenderTexture.active = currentRT;
+        RenderTexture.ReleaseTemporary(tempRT);
+
+        if (capturedFrame != null)
+        {
+            Debug.Log($"[PassthroughCameraAddOns] Frame captured: {capturedFrame.width}x{capturedFrame.height}");
+            capturedImage.texture = capturedFrame;
+            _ = llmAgent.SendPromptAsync(promptKeyboardText.KeyboardText, capturedFrame);
+        }
+    }
+    
+    private void OnDestroy()
+    {
+        if (capturedFrame != null)
+        {
+            Destroy(capturedFrame);
+            capturedFrame = null;
+        }
+    }
+}
